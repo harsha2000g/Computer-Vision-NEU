@@ -5,7 +5,13 @@
 import sys
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 import torchvision
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+import matplotlib
+matplotlib.use('TkAgg')
 
 # class definitions
 class MyNetwork(nn.Module):
@@ -54,7 +60,19 @@ def main(argv):
                             ])),
     batch_size=batch_size_test, shuffle=True)
 
-    
+    examples = enumerate(test_loader)
+    batch_idx, (example_data, example_targets) = next(examples)
+
+    fig = plt.figure()
+    for i in range(6):
+        plt.subplot(2,3,i+1)
+        plt.tight_layout()
+        plt.imshow(example_data[i][0], cmap='gray', interpolation='none')
+        plt.title("Ground Truth: {}".format(example_targets[i]))
+        plt.xticks([])
+        plt.yticks([])
+    plt.show()
+
 
     # main function code
     return
