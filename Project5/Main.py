@@ -10,7 +10,16 @@ import torchvision
 # class definitions
 class MyNetwork(nn.Module):
     def __init__(self):
-        pass
+        n_epochs = 3
+        batch_size_train = 64
+        batch_size_test = 1000
+        learning_rate = 0.01
+        momentum = 0.5
+        log_interval = 10
+
+        random_seed = 42
+        torch.backends.cudnn.enabled = False
+        torch.manual_seed(random_seed)
 
     # computes a forward pass for the network
     # methods need a summary comment
