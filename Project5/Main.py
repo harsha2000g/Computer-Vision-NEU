@@ -66,7 +66,7 @@ def train_network(network, optimizer,  epoch, log_interval, train_loader, train_
         return network, train_losses, train_counter
 
 # This method is used to test the network on the testing data using the test_loader.
-def test_network(network, epoch, train_loader, test_loader, test_losses):
+def test_network(network, test_loader, test_losses):
 
     network.eval()
     test_loss = 0
@@ -140,10 +140,10 @@ def main(argv):
     test_losses = []
     test_counter = [i*len(train_loader.dataset) for i in range(epochs + 1)]
 
-    test_network(network, epochs, train_loader, test_loader, test_losses)
+    test_network(network, test_loader, test_losses)
     for epoch in range(1, epochs + 1):
         train_network(network, optimizer,  epoch, log_interval, train_loader, train_losses, train_counter)
-        test_network(network, epoch, train_loader, test_loader, test_losses)
+        test_network(network, test_loader, test_losses)
 
     fig = plt.figure()
     plt.plot(train_counter, train_losses, color='blue')
@@ -152,7 +152,7 @@ def main(argv):
     plt.xlabel('number of training examples seen')
     plt.ylabel('negative log likelihood loss')
     plt.show()
-    
+
     return
 
 if __name__ == "__main__":
