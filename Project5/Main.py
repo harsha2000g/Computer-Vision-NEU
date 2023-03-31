@@ -1,5 +1,6 @@
-# Sri Harsha Gollamudi
-# This code is 
+# Sri Harsha Gollamudi 
+# Mar 2023
+# This code is used to train and test a network on the MNIST dataset. 
 
 # import statements
 import sys
@@ -13,30 +14,36 @@ import matplotlib.image as mpimg
 import matplotlib
 matplotlib.use('TkAgg')
 
-# class definitions
+# The network used to train and test the data. It has two convolutional layers, 
+# two max pool layers, a drop out layer and a fully connected layer.
 class MyNetwork(nn.Module):
-    def __init__(self):
-         
-        super(MyNetwork, self).__init__()
-        self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-        self.conv2_drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(320, 50)
-        self.fc2 = nn.Linear(50, 10)
     
-
-    # computes a forward pass for the network
-    # methods need a summary comment
+    # Initializes the layers of the network.
+    def __init__(self):
+        super(MyNetwork, self).__init__()
+        
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=10, kernel_size=5)
+        self.maxpool1 = nn.MaxPool2d(kernel_size=2)
+        self.conv2 = nn.Conv2d(in_channels=10, out_channels=20, kernel_size=5)
+        self.dropout = nn.Dropout2d(p=0.5)
+        self.maxpool2 = nn.MaxPool2d(kernel_size=2)
+        self.fc1 = nn.Linear(in_features=320, out_features=50)
+        self.fc2 = nn.Linear(in_features=50, out_features=10)
+    
+    # This method computes a forward pass for the network. It uses relu as the activation function
+    #  and a dropout layer for regularization. For the output layer it applies a log softmax activation function.
     def forward(self, x):
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+        x = F.relu(self.maxpool1(self.conv1(x)))
+        x = F.relu(self.maxpool2(self.dropout(self.conv2(x))))
         x = x.view(-1, 320)
         x = F.relu(self.fc1(x))
         x = F.dropout(x, training=self.training)
         x = self.fc2(x)
-        return F.log_softmax(x)
+        x = F.log_softmax(x, dim=1)
+        return x
 
-# useful functions with a comment for each function
+
+# This method is used to train the network on the training data using the train_loader.
 def train_network(network, optimizer,  epoch, log_interval, train_loader, train_losses, train_counter):
 
         network.train()
@@ -58,6 +65,7 @@ def train_network(network, optimizer,  epoch, log_interval, train_loader, train_
 
         return network, train_losses, train_counter
 
+# This method is used to test the network on the testing data using the test_loader.
 def test_network(network, epoch, train_loader, test_loader, test_losses):
 
     network.eval()
@@ -77,7 +85,7 @@ def test_network(network, epoch, train_loader, test_loader, test_losses):
     
     return network, test_losses
 
-# main function (yes, it needs a comment too)
+# This is the main function of the program and it handles all the functions and the network.
 def main(argv):
     # handle any command line arguments in argv
 
@@ -121,7 +129,7 @@ def main(argv):
         plt.title("Ground Truth: {}".format(example_targets[i]))
         plt.xticks([])
         plt.yticks([])
-    #plt.show()
+    plt.show()
 
     network = MyNetwork()
     optimizer = optim.SGD(network.parameters(), lr=learning_rate,
@@ -137,7 +145,14 @@ def main(argv):
         train_network(network, optimizer,  epoch, log_interval, train_loader, train_losses, train_counter)
         test_network(network, epoch, train_loader, test_loader, test_losses)
 
-    # main function code
+    fig = plt.figure()
+    plt.plot(train_counter, train_losses, color='blue')
+    plt.scatter(test_counter, test_losses, color='red')
+    plt.legend(['Train Loss', 'Test Loss'], loc='upper right')
+    plt.xlabel('number of training examples seen')
+    plt.ylabel('negative log likelihood loss')
+    plt.show()
+    
     return
 
 if __name__ == "__main__":
