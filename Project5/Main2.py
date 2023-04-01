@@ -1,6 +1,6 @@
 # Sri Harsha Gollamudi 
 # Mar 2023
-# This code is used to test the saved network. 
+# This code is used to examine the network and analyze how it processes the data. 
 
 # import statements
 import sys
@@ -51,29 +51,9 @@ def main(argv):
     savedModel = torch.load('results/model.pth')
     network.load_state_dict(savedModel)
 
-    network.eval()
+    print("The network is: ", network)
 
-    test_loader = torch.utils.data.DataLoader(
-    torchvision.datasets.MNIST('', train=False, download=True,
-                            transform=torchvision.transforms.Compose([
-                            torchvision.transforms.ToTensor(),
-                            torchvision.transforms.Normalize(
-                                (0.1307,), (0.3081,))
-                            ])),
-    batch_size=1, shuffle=True)
-
-    for i, (img, label) in enumerate(test_loader):
-        if i >= 10:
-            break
-
-        output = network(img)
-
-        print("Image ", i+1, ": ", output.detach().numpy()[0].round(2))
-        print("Max/Predicted Class: ", output.argmax().numpy())
-
-        pred = output.argmax().item()
-
-        print("Correct Class: ", label.item())
+    print("Shape of the first layer weights: ", network.conv1.weight.shape)
 
     return
 
