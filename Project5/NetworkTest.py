@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
+from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib
@@ -42,6 +43,17 @@ class MyNetwork(nn.Module):
         x = F.log_softmax(x, dim=1)
         return x
 
+# This function loads the custom images that are handwritten and resizes them to match the input dimensions (28 x 28)    
+def loadCustomImages():
+    customImages = []
+    for i in range(10):
+        image = Image.open(f'Custom Digits/{i}.jpg').convert('L')
+        image = torchvision.transforms.Resize((28, 28))(image)
+        image = torchvision.transforms.ToTensor()(image)
+        image = torchvision.transforms.Normalize((0.1307,), (0.3081,))(image)
+        customImages.append(image)
+    return customImages
+
 # This is the main function of the program and it handles all the functions and the network.
 def main(argv):
     # handle any command line arguments in argv
@@ -62,8 +74,11 @@ def main(argv):
                             ])),
     batch_size=1, shuffle=True)
 
+    fig, axs = plt.subplots(3, 3, figsize=(8, 8))
+    fig.subplots_adjust(hspace = .5, wspace=.001)
+
     for i, (img, label) in enumerate(test_loader):
-        if i >= 10:
+        if i >= 9:
             break
 
         output = network(img)
@@ -71,9 +86,38 @@ def main(argv):
         print("Image ", i+1, ": ", output.detach().numpy()[0].round(2))
         print("Max/Predicted Class: ", output.argmax().numpy())
 
-        pred = output.argmax().item()
-
         print("Correct Class: ", label.item())
+
+        img = img.squeeze()
+        img = img.detach().numpy()
+        axs[i//3, i%3].imshow(img, cmap='gray')
+        axs[i//3, i%3].set_title("Pred: {}".format(output.argmax().numpy()))
+        axs[i//3, i%3].axis('off')
+
+    plt.show()
+
+    customImages = loadCustomImages()
+
+    print("\nThe Custom Data output is\n")
+
+    fig, axs = plt.subplots(3, 3, figsize=(8, 8))
+    fig.subplots_adjust(hspace = .5, wspace=.001)
+
+    for i, img in enumerate(customImages):
+
+        output = network(img.unsqueeze(0))
+
+        print("Custom Image ", i+1, ": ", output.detach().numpy()[0].round(2))
+        print("Max/Predicted Class: ", output.argmax().numpy())
+
+        if i < 9:
+            img = img.squeeze()
+            img = img.detach().numpy()
+            axs[i//3, i%3].imshow(img, cmap='gray')
+            axs[i//3, i%3].set_title("Pred: {}".format(output.argmax().numpy()))
+            axs[i//3, i%3].axis('off')
+    
+    plt.show()
 
     return
 
