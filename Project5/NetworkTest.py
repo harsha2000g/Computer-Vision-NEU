@@ -13,6 +13,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib
+from torchviz import make_dot
 matplotlib.use('TkAgg')
 
 # The network used to train and test the data. It has two convolutional layers, 
@@ -118,6 +119,9 @@ def main(argv):
             axs[i//3, i%3].axis('off')
     
     plt.show()
+
+    # vis_graph = make_dot(network(img.unsqueeze(0)), params=dict(network.named_parameters()))
+    # vis_graph.render('Network Diagram', format='png')
 
     return
 
