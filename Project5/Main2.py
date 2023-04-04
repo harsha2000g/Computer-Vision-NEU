@@ -12,6 +12,7 @@ import torchvision
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib
+import cv2
 matplotlib.use('TkAgg')
 
 # The network used to train and test the data. It has two convolutional layers, 
@@ -54,6 +55,66 @@ def main(argv):
     print("The network is: ", network)
 
     print("Shape of the first layer weights: ", network.conv1.weight.shape)
+
+    weights = network.conv1.weight
+    for i in range(10):
+        print("Shape of filter ", i, ": ", weights[i, 0].shape)
+        print("Weights of filter ", i, ": ", weights[i, 0])
+
+
+    fig, axes = plt.subplots(nrows=3, ncols=4, figsize=(10,10))
+    for i, ax in enumerate(axes.flat):
+        if i < 10:
+            img = ax.imshow(weights[i, 0].detach().numpy())
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_title("Filter {}".format(i+1))
+        else:
+            ax.axis('off')
+    plt.tight_layout()
+    plt.show()
+
+    train_loader = torch.utils.data.DataLoader(
+    torchvision.datasets.MNIST('', train=True, download=True,
+                            transform=torchvision.transforms.Compose([
+                            torchvision.transforms.ToTensor(),
+                            torchvision.transforms.Normalize(
+                                (0.1307,), (0.3081,))
+                            ])),
+    batch_size=1, shuffle=True)
+
+    examples = enumerate(train_loader)
+    batch_idx, (example_data, example_targets) = next(examples)
+    image = example_data
+
+    with torch.no_grad():
+        img = example_data[0][0].numpy()
+        fig, axes = plt.subplots(nrows=5, ncols=4, figsize=(12,5))
+        filtered_images = []
+        for i in range(5):
+            filter = weights[i, 0].detach().numpy()
+            filtered_image = cv2.filter2D(img, -1, filter)
+            filtered_images.append(filtered_image)
+            axes[i,1].imshow(filtered_image, cmap = "gray")
+            axes[i,1].set_xticks([])
+            axes[i,1].set_yticks([])
+            axes[i,0].imshow(filter, cmap = "gray")
+            axes[i,0].set_xticks([])
+            axes[i,0].set_yticks([])
+        for i in range(5, 10):
+            x = i - 5
+            filter = weights[i, 0].detach().numpy()
+            filtered_image = cv2.filter2D(img, -1, filter)
+            filtered_images.append(filtered_image)
+            axes[x,3].imshow(filtered_image, cmap = "gray")
+            axes[x,3].set_xticks([])
+            axes[x,3].set_yticks([])
+            axes[x,2].imshow(filter, cmap = "gray")
+            axes[x,2].set_xticks([])
+            axes[x,2].set_yticks([])
+        plt.tight_layout()
+        plt.show()
+
 
     return
 

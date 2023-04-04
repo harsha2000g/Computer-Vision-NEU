@@ -60,8 +60,8 @@ def train_network(network, optimizer,  epoch, log_interval, train_loader, train_
                 train_losses.append(loss.item())
                 train_counter.append(
                     (batch_idx*64) + ((epoch-1)*len(train_loader.dataset)))
-                torch.save(network.state_dict(), 'results/model.pth')
-                torch.save(optimizer.state_dict(), 'results/optimizer.pth')
+                #torch.save(network.state_dict(), 'results/model.pth')
+                #torch.save(optimizer.state_dict(), 'results/optimizer.pth')
 
         return network, train_losses, train_counter
 
@@ -89,7 +89,7 @@ def test_network(network, test_loader, test_losses):
 def main(argv):
     # handle any command line arguments in argv
 
-    epochs = 3
+    epochs = 5
     batch_size_train = 64
     batch_size_test = 1000
     learning_rate = 0.01
