@@ -142,6 +142,8 @@ def main(argv):
     test_losses = []
     test_counter = []
 
+    
+
 
     return
 
