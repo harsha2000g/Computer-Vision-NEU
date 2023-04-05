@@ -1,6 +1,6 @@
 # Sri Harsha Gollamudi 
 # Mar 2023
-# This code is used to train and test a network on the MNIST dataset. 
+# This code is used to train and test a network on the MNIST dataset. (Task 1)
 
 # import statements
 import sys

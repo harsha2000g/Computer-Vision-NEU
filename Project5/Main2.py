@@ -1,6 +1,6 @@
 # Sri Harsha Gollamudi 
 # Mar 2023
-# This code is used to examine the network and analyze how it processes the data. 
+# This code is used to examine the network and analyze how it processes the data. (Task 2)
 
 # import statements
 import sys

@@ -1,6 +1,6 @@
 # Sri Harsha Gollamudi 
 # Mar 2023
-# This code is used to test the saved network. 
+# This code is used to test the saved network. (Task 1)
 
 # import statements
 import sys
