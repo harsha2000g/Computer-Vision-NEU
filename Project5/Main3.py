@@ -82,6 +82,7 @@ def loadCustomImages():
     customImages = []
     for i in range(1, 10):
         image = Image.open(f'Custom Greek Letters/{i}.jpg').convert('L')
+        #image = Image.open(f'temp/{i}.png').convert('L')
         image = torchvision.transforms.Resize((28, 28))(image)
         image = torchvision.transforms.ToTensor()(image)
         image = torchvision.transforms.Normalize((0.1307,), (0.3081,))(image)
@@ -140,6 +141,7 @@ def main(argv):
         shuffle = True )
     
     network.fc2 = nn.Linear(in_features=50, out_features=3)
+    network.fc2.requires_grad_(True)
 
     print("The network after changing last layer is: ", network)
 
@@ -148,7 +150,7 @@ def main(argv):
     test_losses = []
     test_counter = [i*len(greek_train.dataset) for i in range(epochs + 1)]
 
-    optimizer = optim.SGD(network.parameters(), lr=learning_rate,
+    optimizer = optim.SGD(network.fc2.parameters(), lr=learning_rate,
                       momentum=momentum)
 
     test_network(network, greek_train, test_losses)
@@ -172,9 +174,10 @@ def main(argv):
     fig, axs = plt.subplots(3, 3, figsize=(8, 8))
     fig.subplots_adjust(hspace = .5, wspace=.001)
 
+    network.eval()
+
     for i, img in enumerate(customImages):
 
-        print("Here: ", img.shape)
         output = network(img)
 
         print("Custom Image ", i+1, ": ", output.detach().numpy()[0].round(2))
