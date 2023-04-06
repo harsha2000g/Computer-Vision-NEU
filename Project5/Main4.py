@@ -14,6 +14,8 @@ import matplotlib.image as mpimg
 import matplotlib
 from PIL import Image
 import cv2
+import pandas as pd
+import numpy as np
 matplotlib.use('TkAgg')
 
 # The network used to train and test the data. It has two convolutional layers, 
@@ -21,16 +23,16 @@ matplotlib.use('TkAgg')
 class MyNetwork(nn.Module):
     
     # Initializes the layers of the network.
-    def __init__(self):
+    def __init__(self, dropoutRate, fc1Nodes):
         super(MyNetwork, self).__init__()
         
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=10, kernel_size=5)
         self.maxpool1 = nn.MaxPool2d(kernel_size=2)
         self.conv2 = nn.Conv2d(in_channels=10, out_channels=20, kernel_size=5)
-        self.dropout = nn.Dropout2d(p=0.5)
+        self.dropout = nn.Dropout2d(p=dropoutRate)
         self.maxpool2 = nn.MaxPool2d(kernel_size=2)
-        self.fc1 = nn.Linear(in_features=320, out_features=50)
-        self.fc2 = nn.Linear(in_features=50, out_features=10)
+        self.fc1 = nn.Linear(in_features=320, out_features=fc1Nodes)
+        self.fc2 = nn.Linear(in_features=fc1Nodes, out_features=10)
     
     # This method computes a forward pass for the network. It uses relu as the activation function
     #  and a dropout layer for regularization. For the output layer it applies a log softmax activation function.
@@ -45,7 +47,7 @@ class MyNetwork(nn.Module):
         return x
     
 # This method is used to train the network on the greek letters data.
-def train_network(network, optimizer,  epoch, log_interval, train_loader, train_losses, train_counter):
+def train_network(network, optimizer, epoch, log_interval, train_loader, train_losses, train_counter):
 
         network.train()
         for batch_idx, (data, target) in enumerate(train_loader):
@@ -55,9 +57,9 @@ def train_network(network, optimizer,  epoch, log_interval, train_loader, train_
             loss.backward()
             optimizer.step()
             if batch_idx % log_interval == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
+                # print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                #     epoch, batch_idx * len(data), len(train_loader.dataset),
+                #     100. * batch_idx / len(train_loader), loss.item()))
                 train_losses.append(loss.item())
                 train_counter.append(
                     (batch_idx*64) + ((epoch-1)*len(train_loader.dataset)))
@@ -80,13 +82,15 @@ def test_network(network, test_loader, test_losses):
             correct += pred.eq(target.data.view_as(pred)).sum()
     test_loss /= len(test_loader.dataset)
     test_losses.append(test_loss)
-    print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+    # print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+    #     test_loss, correct, len(test_loader.dataset),
+    #     100. * correct / len(test_loader.dataset)))
     
-    return network, test_losses
+    accuracy = 100. * correct / len(test_loader.dataset)
+    
+    return accuracy
 
-def gridSearch(epochs, batch_size_train, learning_rate):
+def gridSearch(epochs, batch_size_train, learning_rate, dropoutRate, fc1Nodes):
 
     batch_size_test = 1000
     momentum = 0.5
@@ -114,7 +118,7 @@ def gridSearch(epochs, batch_size_train, learning_rate):
                             ])),
     batch_size=batch_size_test, shuffle=True)
 
-    network = MyNetwork()
+    network = MyNetwork(dropoutRate, fc1Nodes)
     optimizer = optim.SGD(network.parameters(), lr=learning_rate,
                       momentum=momentum)
     
@@ -126,9 +130,9 @@ def gridSearch(epochs, batch_size_train, learning_rate):
     test_network(network, test_loader, test_losses)
     for epoch in range(1, epochs + 1):
         train_network(network, optimizer,  epoch, log_interval, train_loader, train_losses, train_counter)
-        test_network(network, test_loader, test_losses)
+        accuracy  = test_network(network, test_loader, test_losses)
 
-    return train_losses, train_counter, test_losses, test_counter
+    return train_losses, train_counter, test_losses, test_counter, accuracy
 
     
 
@@ -137,13 +141,29 @@ def gridSearch(epochs, batch_size_train, learning_rate):
 def main(argv):
     # handle any command line arguments in argv
 
-    train_losses_list = []
-    train_counter_list = []
-    test_losses = []
-    test_counter = []
+    df = pd.DataFrame(columns=["Epochs", "Batch Size", "Learning Rate", "Accuracy", "train_losses", "train_counter", "test_losses", "test_counter"])
 
-    
+    epochsList = [3, 6, 10]
+    learningRateList = [0.0001, 0.01, 1]
+    batchSizeList = [32, 64, 256]
+    dropoutRateList = [0.2, 0.5, 1]
+    fc1NodesList = [10, 30, 50]
 
+    c = 1
+
+    for epochs in epochsList:
+        for batch_size_train in batchSizeList:
+            for learning_rate in learningRateList:
+                for dropoutRate in dropoutRateList:
+                    for fc1Nodes in fc1NodesList:
+                        train_losses, train_counter, test_losses, test_counter, accuracy = gridSearch(epochs, batch_size_train, learning_rate, dropoutRate, fc1Nodes)
+                        results_dict = {"Epochs": epochs, "Batch Size": batch_size_train, "Learning Rate": learning_rate, "Accuracy": accuracy, "train_losses": train_losses, "train_counter": train_counter, "test_losses": test_losses, "test_counter": test_counter}
+                        df = df._append(results_dict, ignore_index=True)
+                        print(c)
+                        c += 1
+
+    print("DATAFRAME: ", df)
+    df.to_csv("Task4.csv")
 
     return
 
