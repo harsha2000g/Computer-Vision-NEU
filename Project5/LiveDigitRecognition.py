@@ -74,7 +74,8 @@ def main(argv):
         with torch.no_grad():
             output = network(input)
         predicted_class = torch.argmax(output, dim=1).item()
-        cv2.putText(frame, str(predicted_class), (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+        s = "Prediction: " + str(predicted_class)
+        cv2.putText(frame, s, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
         cv2.imshow('Live Digit Recognition', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

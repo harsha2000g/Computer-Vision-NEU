@@ -1,6 +1,6 @@
 # Sri Harsha Gollamudi 
 # Mar 2023
-# This code is used to perform transfer learning on the greek letters. (Task 3)
+# This code is used to train and test a network on the MNIST dataset using Gabor filter instead of first . (Extension)
 
 # import statements
 import sys
@@ -12,7 +12,7 @@ import torchvision
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib
-from PIL import Image
+import numpy as np
 import cv2
 matplotlib.use('TkAgg')
 
@@ -43,19 +43,52 @@ class MyNetwork(nn.Module):
         x = self.fc2(x)
         x = F.log_softmax(x, dim=1)
         return x
-    
-# greek data set transform
-class GreekTransform:
-    def __init__(self):
-        pass
 
-    def __call__(self, x):
-        x = torchvision.transforms.functional.rgb_to_grayscale( x )
-        x = torchvision.transforms.functional.affine( x, 0, (0,0), 36/128, 0 )
-        x = torchvision.transforms.functional.center_crop( x, (28, 28) )
-        return torchvision.transforms.functional.invert( x )
-    
-# This method is used to train the network on the greek letters data.
+# The network used to train and test the data. It has one layer with Gabor filters and two convolutional layers, 
+# two max pool layers, a drop out layer and a fully connected layer.   
+class GaborFilterNetwork(MyNetwork):
+    # Initializes the layers of the network.
+    def __init__(self):
+        super(GaborFilterNetwork, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5)
+        self.maxpool1 = nn.MaxPool2d(kernel_size=2)
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5)
+        self.dropout = nn.Dropout2d(p=0.5)
+        self.maxpool2 = nn.MaxPool2d(kernel_size=2)
+        self.fc1 = nn.Linear(in_features=1024, out_features=256)
+        self.fc2 = nn.Linear(in_features=256, out_features=10)
+
+        # Generating Gabor Filters
+        self.filter_bank = []
+        ksize = 5
+        sigma = 1.0
+        theta = torch.arange(0, 8) * (np.pi / 8)
+        lambd = torch.arange(4, 12, 2)
+        gamma = 0.5
+        for i in range(len(theta)):
+            for j in range(len(lambd)):
+                kernel = cv2.getGaborKernel((ksize, ksize), sigma, theta[i].item(), lambd[j].item(), gamma, 0, ktype=cv2.CV_32F)
+                # Freezing First Layer
+                self.filter_bank.append(nn.Parameter(torch.from_numpy(kernel).unsqueeze(0).unsqueeze(0), requires_grad=False))
+
+    # This method computes a forward pass for the network. It uses relu as the activation function
+    #  and a dropout layer for regularization. For the output layer it applies a log softmax activation function. 
+    # It also applies the Gabor Filters and transforms the input from 1,28,28 to 32,28,28.
+    def forward(self, x):
+        features = []
+        for filter in self.filter_bank:
+            features.append(F.conv2d(x, filter, padding=2))
+        x = torch.cat(features, dim=1)
+        x = F.relu(self.maxpool1(self.conv1(x)))
+        x = F.relu(self.maxpool2(self.dropout(self.conv2(x))))
+        x = x.view(-1, 1024)
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, training=self.training)
+        x = self.fc2(x)
+        x = F.log_softmax(x, dim=1)
+        return x
+
+# This method is used to train the network on the training data using the train_loader.
 def train_network(network, optimizer,  epoch, log_interval, train_loader, train_losses, train_counter):
 
         network.train()
@@ -76,18 +109,6 @@ def train_network(network, optimizer,  epoch, log_interval, train_loader, train_
                 #torch.save(optimizer.state_dict(), 'results/optimizer.pth')
 
         return network, train_losses, train_counter
-
-# This function loads the custom images that are handwritten and resizes them to match the input dimensions (28 x 28)    
-def loadCustomImages():
-    customImages = []
-    for i in range(1, 10):
-        image = Image.open(f'Custom Greek Letters/{i}.png').convert('L')
-        #image = Image.open(f'temp/{i}.png').convert('L')
-        image = torchvision.transforms.Resize((28, 28))(image)
-        image = torchvision.transforms.ToTensor()(image)
-        image = torchvision.transforms.Normalize((0.1307,), (0.3081,))(image)
-        customImages.append(image)
-    return customImages
 
 # This method is used to test the network on the testing data using the test_loader.
 def test_network(network, test_loader, test_losses):
@@ -112,8 +133,10 @@ def test_network(network, test_loader, test_losses):
 # This is the main function of the program and it handles all the functions and the network.
 def main(argv):
     # handle any command line arguments in argv
-    epochs = 20
-    batch_size_train = 5
+
+    epochs = 5
+    batch_size_train = 64
+    batch_size_test = 1000
     learning_rate = 0.01
     momentum = 0.5
     log_interval = 10
@@ -122,42 +145,37 @@ def main(argv):
     torch.backends.cudnn.enabled = False
     torch.manual_seed(random_seed)
 
-    # Loading the saved network
-    network = MyNetwork()
-    savedModel = torch.load('results/model.pth')
-    network.load_state_dict(savedModel)
+    train_loader = torch.utils.data.DataLoader(
+    torchvision.datasets.MNIST('', train=True, download=True,
+                            transform=torchvision.transforms.Compose([
+                            torchvision.transforms.ToTensor(),
+                            torchvision.transforms.Normalize(
+                                (0.1307,), (0.3081,))
+                            ])),
+    batch_size=batch_size_train, shuffle=True)
 
-    print("The network is: ", network)
+    test_loader = torch.utils.data.DataLoader(
+    torchvision.datasets.MNIST('', train=False, download=True,
+                            transform=torchvision.transforms.Compose([
+                            torchvision.transforms.ToTensor(),
+                            torchvision.transforms.Normalize(
+                                (0.1307,), (0.3081,))
+                            ])),
+    batch_size=batch_size_test, shuffle=True)
 
-    # freezes the parameters for the whole network
-    for param in network.parameters():
-        param.requires_grad = False
-
-    # DataLoader for the Greek data set
-    greek_train = torch.utils.data.DataLoader(
-        torchvision.datasets.ImageFolder( "greek_train",transform = torchvision.transforms.Compose( 
-        [torchvision.transforms.ToTensor(),GreekTransform(),torchvision.transforms.Normalize((0.1307,), (0.3081,) ) ] ) ),
-        batch_size = batch_size_train,
-        shuffle = True )
+    network = GaborFilterNetwork()
+    optimizer = optim.SGD(network.parameters(), lr=learning_rate,
+                      momentum=momentum)
     
-    network.fc2 = nn.Linear(in_features=50, out_features=3)
-    network.fc2.requires_grad_(True)
-
-    print("The network after changing last layer is: ", network)
-
     train_losses = []
     train_counter = []
     test_losses = []
-    test_counter = [i*len(greek_train.dataset) for i in range(epochs + 1)]
+    test_counter = [i*len(train_loader.dataset) for i in range(epochs + 1)]
 
-    optimizer = optim.SGD(network.fc2.parameters(), lr=learning_rate,
-                      momentum=momentum)
-
-    test_network(network, greek_train, test_losses)
+    test_network(network, test_loader, test_losses)
     for epoch in range(1, epochs + 1):
-        train_network(network, optimizer,  epoch, log_interval, greek_train, train_losses, train_counter)
-        test_network(network, greek_train, test_losses)
-
+        train_network(network, optimizer,  epoch, log_interval, train_loader, train_losses, train_counter)
+        test_network(network, test_loader, test_losses)
 
     fig = plt.figure()
     plt.plot(train_counter, train_losses, color='blue')
@@ -165,31 +183,6 @@ def main(argv):
     plt.legend(['Train Loss', 'Test Loss'], loc='upper right')
     plt.xlabel('number of training examples seen')
     plt.ylabel('negative log likelihood loss')
-    plt.show()
-
-    customImages = loadCustomImages()
-
-    print("\nThe Custom Data output is\n")
-
-    fig, axs = plt.subplots(3, 3, figsize=(8, 8))
-    fig.subplots_adjust(hspace = .5, wspace=.001)
-
-    network.eval()
-
-    for i, img in enumerate(customImages):
-
-        output = network(img)
-
-        print("Custom Image ", i+1, ": ", output.detach().numpy()[0].round(2))
-        print("Max/Predicted Class: ", output.argmax().numpy())
-
-        if i < 9:
-            img = img.squeeze()
-            img = img.detach().numpy()
-            axs[i//3, i%3].imshow(img, cmap='gray')
-            axs[i//3, i%3].set_title("Pred: {}".format(output.argmax().numpy()))
-            axs[i//3, i%3].axis('off')
-    
     plt.show()
 
     return

@@ -92,53 +92,6 @@ def test_network(network, test_loader, test_losses):
     
     return accuracy
 
-def gridSearch(epochs, batch_size_train, learning_rate, dropoutRate, fc1Nodes):
-
-    batch_size_test = 1000
-    momentum = 0.5
-    log_interval = 10
-
-    random_seed = 42
-    torch.backends.cudnn.enabled = False
-    torch.manual_seed(random_seed)
-
-    train_loader = torch.utils.data.DataLoader(
-    torchvision.datasets.FashionMNIST('', train=True, download=True,
-                            transform=torchvision.transforms.Compose([
-                            torchvision.transforms.ToTensor(),
-                            torchvision.transforms.Normalize(
-                                (0.1307,), (0.3081,))
-                            ])),
-    batch_size=batch_size_train, shuffle=True)
-
-    test_loader = torch.utils.data.DataLoader(
-    torchvision.datasets.FashionMNIST('', train=False, download=True,
-                            transform=torchvision.transforms.Compose([
-                            torchvision.transforms.ToTensor(),
-                            torchvision.transforms.Normalize(
-                                (0.1307,), (0.3081,))
-                            ])),
-    batch_size=batch_size_test, shuffle=True)
-
-    network = MyNetwork(dropoutRate, fc1Nodes)
-    optimizer = optim.SGD(network.parameters(), lr=learning_rate,
-                      momentum=momentum)
-    
-    train_losses = []
-    train_counter = []
-    test_losses = []
-    test_counter = [i*len(train_loader.dataset) for i in range(epochs + 1)]
-
-    test_network(network, test_loader, test_losses)
-    for epoch in range(1, epochs + 1):
-        train_network(network, optimizer,  epoch, log_interval, train_loader, train_losses, train_counter)
-        accuracy  = test_network(network, test_loader, test_losses)
-
-    return train_losses, train_counter, test_losses, test_counter, accuracy
-
-    
-
-
 # This is the main function of the program and it handles all the functions and the network.
 def main(argv):
     # handle any command line arguments in argv
@@ -157,8 +110,7 @@ def main(argv):
         for learning_rate in learningRateList:
             for dropoutRate in dropoutRateList:
                 for fc1Nodes in fc1NodesList:
-                    #train_losses, train_counter, test_losses, test_counter, accuracy = gridSearch(epochs, batch_size_train, learning_rate, dropoutRate, fc1Nodes)
-
+                    
                     batch_size_test = 1000
                     momentum = 0.5
                     log_interval = 10
